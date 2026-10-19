@@ -1,0 +1,36 @@
+# What `ffc fetch` downloads with `nextstrain remote download`.
+# It only ever DOWNLOADS. It never uploads and never logs in for you.
+# Everything lands in data/raw/ (git-ignored), then `ffc fetch` rewrites
+# the fetch-managed entries of config/manifest.yaml.
+
+segments: [ha, na]
+
+# Subtype ids as used by each source.
+subtypes:
+  h1n1pdm: {local: h1n1, global: h1n1pdm}
+  h3n2:    {local: h3n2, global: h3n2}
+  vic:     {local: vic,  global: vic}
+
+global:
+  organization: Nextstrain seasonal-flu
+  # Public seasonal-flu datasets: nextstrain.org/flu/seasonal/{subtype}/{segment}/{resolution}
+  remote_prefix: nextstrain.org/flu/seasonal
+  # Resolutions that do not exist on nextstrain.org are reported and skipped.
+  resolutions: [6m, 2y, 3y, 6y, 12y]
+
+local:
+  organization: JHH
+  # remote: download the reviewed builds from the lab's Nextstrain group
+  #         (private group: run `nextstrain login` yourself first).
+  # copy:   copy JSONs from the nextstrain repo's auspice/ folder (read-only).
+  mode: remote
+  remote_prefix: nextstrain.org/groups/PekoszLab/seasonal
+  copy_from: ../nextstrain/auspice
+
+# Clade/subclade colours are refreshed from nextstrain.org on EVERY `ffc fetch`
+# (Nextstrain re-assigns colours as new subclades appear). They come from the
+# global datasets downloaded in that run; if a run downloads none for a
+# subtype/segment (e.g. `ffc fetch --only local`), these resolutions are
+# downloaded just to read their colours. Stored in data/colors/nextstrain_colors.json.
+colors:
+  resolutions: [2y]

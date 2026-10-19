@@ -1,0 +1,31 @@
+# Example manifest. `ffc fetch` writes config/manifest.yaml for you; copy this
+# file to config/manifest.yaml only if you want to list builds by hand.
+# Paths are relative to the project folder. Fields not listed below are kept
+# as extra manifest metadata and shown as "manifest" in the provenance panel.
+version: 1
+builds:
+  - id: jhh_h3n2_ha                       # unique id
+    source_type: local                    # local | global
+    organization: JHH
+    subtype: h3n2                         # h1n1pdm | h3n2 | vic (aliases: H1, H3, B/Vic ...)
+    segment: HA                           # HA | NA (others when enabled in settings.yaml)
+    auspice_json: data/raw/local/h3n2/ha/current/ha.json
+    frequencies_json: data/raw/local/h3n2/ha/current/ha_tip-frequencies.json   # optional; auto-detected if omitted
+    label: "JHH A/H3N2 HA local surveillance"
+    active: true
+
+  - id: nextstrain_h3n2_ha_2y
+    source_type: global
+    organization: Nextstrain seasonal-flu
+    subtype: h3n2
+    segment: HA
+    resolution: 2y
+    auspice_json: data/raw/global/h3n2/ha/2y/flu_seasonal_h3n2_ha_2y.json
+    frequencies_json: data/raw/global/h3n2/ha/2y/flu_seasonal_h3n2_ha_2y_tip-frequencies.json
+    root_sequence_json: data/raw/global/h3n2/ha/2y/flu_seasonal_h3n2_ha_2y_root-sequence.json  # optional
+    label: "Nextstrain seasonal-flu A/H3N2 HA (2y)"
+    remote: nextstrain.org/flu/seasonal/h3n2/ha/2y   # optional provenance
+    fetched_at: "2026-10-12T09:00:00-04:00"           # optional provenance
+    build_date: null                                  # optional; JSONs only carry meta.updated
+    downsampling_description: null                    # optional override of the default statement
+    active: true

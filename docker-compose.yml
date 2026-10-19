@@ -1,0 +1,10 @@
+# Optional: docker compose up --build   (dashboard at http://127.0.0.1:8050)
+# Runs `ffc ingest` on start, then serves. Run `ffc fetch` on the host first.
+services:
+  dashboard:
+    build: { context: ., dockerfile: docker/Dockerfile }
+    ports: ["127.0.0.1:8050:8050"]   # bound to this computer only
+    volumes:
+      - ./data:/app/data:ro
+      - ./config:/app/config:ro
+      - ./store:/app/store

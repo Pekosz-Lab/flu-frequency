@@ -1,0 +1,17 @@
+# Optional, explicit, versioned taxon relabelling applied when comparing
+# local and global builds. Empty by default: labels are matched exactly.
+#
+# Raw labels are always kept in the stored tables; mappings are applied at
+# query time and listed in the provenance panel and every export.
+# Never map biologically distinct clades/subclades/genotypes onto each other.
+#
+# Example:
+# mappings:
+#   - grouping: subclade        # clade | subclade | genotype
+#     subtype: h3n2             # or "*" for all
+#     source: global            # local | global | both
+#     from: "J.2"
+#     to: "J.2"
+#     reason: "Example only"
+version: 1
+mappings: []

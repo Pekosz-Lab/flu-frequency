@@ -1,0 +1,21 @@
+# ---- DATA: never commit (JHH unpublished sequences/metadata, GISAID-derived builds) ----
+data/
+store/
+store-demo/
+exports/
+*.duckdb
+*.duckdb.wal
+*.parquet
+config/manifest.yaml
+config/manifest.demo.yaml
+# --------------------------------------------------------------------------------------
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+frontend/node_modules/
+frontend/test-results/
+frontend/playwright-report/
+.DS_Store
+frontend/*.tsbuildinfo
+site-dist/

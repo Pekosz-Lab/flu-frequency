@@ -1,0 +1,72 @@
+# flu-freq-compare settings. Safe to edit; re-run `ffc ingest` afterwards.
+
+# Segments exposed in the dashboard. The data model supports all eight
+# segments plus GENOME; add e.g. PB2 here to enable it later.
+enabled_segments: [HA, NA]
+
+# Which node_attrs field in the Auspice JSON supplies each grouping.
+# The first field that exists in a build is used, and the field actually
+# used is shown in the provenance panel. Local JHH builds use
+# `legacy-clade`/`subclade`; Nextstrain seasonal-flu builds may use other
+# names, so check with `ffc inspect` after your first fetch.
+grouping_fields:
+  clade: [legacy-clade, clade, clade_membership]
+  subclade: [subclade, proposed_subclade]
+
+# Metadata filters offered for each build.
+metadata_filters:
+  # Offer every categorical coloring and every meta.filters entry.
+  include_json_filters: true
+  include_categorical_colorings: true
+  # Extra node_attrs offered if present in a build.
+  extra_candidates: [region, country, division, location, host, age_group, age, sex, gender,
+                     submitting_lab, originating_lab, sequencing_run]
+  # Never offered as filters.
+  exclude: [num_date, gt, div, vaccine, author, strain, accession, gisaid_epi_isl, genbank_accession,
+            url, coverage, qc_overallScore]
+  # Fields with more distinct values than this are not offered (e.g. IDs).
+  max_distinct_values: 400
+
+# Filters that apply to BOTH datasets at once ("Both datasets" tab).
+# A pair of fields is offered when it is listed below (or has the same name in
+# both builds) AND the two fields have at least one value in common; of the
+# listed candidates, the pair sharing the most values is used. The fields used
+# are shown in the dashboard and every export.
+shared_filters:
+  auto_same_name: true        # also pair any filterable field with the same name in both builds
+  never: []                   # field names never to pair automatically
+  pairs:
+    - id: subclade
+      label: Subclade
+      local: [subclade]
+      # seasonal-flu NA builds call the NA nomenclature `subclade` and keep the
+      # HA subclade in `subclade_nextclade_ha`; the overlap check picks the right one
+      global: [subclade, subclade_nextclade_ha, subclade_nextclade_na]
+    - id: clade
+      label: Clade
+      local: [clade_membership, clade, legacy-clade]
+      global: [clade_membership, clade]
+    - id: qc_status
+      label: Nextclade QC status
+      local: [qc_overallStatus, qc.overallStatus, qc.overallStatus_ha, qc.overallStatus_na]
+      global: [qc.overallStatus_ha, qc.overallStatus_na, qc_overallStatus]
+
+# Used only when a build has no tip-frequencies JSON. Mirrors the defaults
+# of `augur frequencies --method kde`.
+recompute:
+  narrow_bandwidth: 0.0833333   # years (1/12)
+  wide_bandwidth: 0.25          # years (3/12)
+  proportion_wide: 0.2
+  pivot_interval_months: 1
+
+# Colours. "nextstrain" uses the colour scales stored in the JSONs (global
+# build first, so subclade colours match nextstrain.org); "colorblind" uses
+# a colour-blind-safe palette. Users can switch in the dashboard.
+default_palette: nextstrain
+
+# Top-N taxa shown by default (others grouped as "Other"); 0 = show all.
+default_top_n: 12
+
+server:
+  host: 127.0.0.1   # local machine only; JHH data must not be served to the network
+  port: 8050

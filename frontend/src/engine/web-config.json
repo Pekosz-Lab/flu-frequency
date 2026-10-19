@@ -1,0 +1,170 @@
+{
+ "nextstrain_origin": "https://nextstrain.org",
+ "segments": [
+  "HA",
+  "NA"
+ ],
+ "enabled_segments": [
+  "HA",
+  "NA"
+ ],
+ "subtypes": [
+  {
+   "id": "h1n1pdm",
+   "label": "A/H1N1pdm",
+   "local": "h1n1",
+   "global": "h1n1pdm"
+  },
+  {
+   "id": "h3n2",
+   "label": "A/H3N2",
+   "local": "h3n2",
+   "global": "h3n2"
+  },
+  {
+   "id": "vic",
+   "label": "B/Victoria",
+   "local": "vic",
+   "global": "vic"
+  }
+ ],
+ "global": {
+  "prefix": "flu/seasonal",
+  "resolutions": [
+   "6m",
+   "2y",
+   "3y",
+   "6y",
+   "12y"
+  ],
+  "organization": "Nextstrain seasonal-flu"
+ },
+ "local": {
+  "prefix": "groups/PekoszLab-Public/seasonal-flu",
+  "organization": "JHH (PekoszLab-Public group)"
+ },
+ "grouping_fields": {
+  "clade": [
+   "legacy-clade",
+   "clade",
+   "clade_membership"
+  ],
+  "subclade": [
+   "subclade",
+   "proposed_subclade"
+  ]
+ },
+ "metadata_filters": {
+  "include_json_filters": true,
+  "include_categorical_colorings": true,
+  "extra_candidates": [
+   "region",
+   "country",
+   "division",
+   "location",
+   "host",
+   "age_group",
+   "age",
+   "sex",
+   "gender",
+   "submitting_lab",
+   "originating_lab",
+   "sequencing_run"
+  ],
+  "exclude": [
+   "num_date",
+   "gt",
+   "div",
+   "vaccine",
+   "author",
+   "strain",
+   "accession",
+   "gisaid_epi_isl",
+   "genbank_accession",
+   "url",
+   "coverage",
+   "qc_overallScore"
+  ],
+  "max_distinct_values": 400
+ },
+ "shared_filters": {
+  "auto_same_name": true,
+  "never": [],
+  "pairs": [
+   {
+    "id": "subclade",
+    "label": "Subclade",
+    "local": [
+     "subclade"
+    ],
+    "global": [
+     "subclade",
+     "subclade_nextclade_ha",
+     "subclade_nextclade_na"
+    ]
+   },
+   {
+    "id": "clade",
+    "label": "Clade",
+    "local": [
+     "clade_membership",
+     "clade",
+     "legacy-clade"
+    ],
+    "global": [
+     "clade_membership",
+     "clade"
+    ]
+   },
+   {
+    "id": "qc_status",
+    "label": "Nextclade QC status",
+    "local": [
+     "qc_overallStatus",
+     "qc.overallStatus",
+     "qc.overallStatus_ha",
+     "qc.overallStatus_na"
+    ],
+    "global": [
+     "qc.overallStatus_ha",
+     "qc.overallStatus_na",
+     "qc_overallStatus"
+    ]
+   }
+  ]
+ },
+ "recompute": {
+  "narrow_bandwidth": 0.0833333,
+  "wide_bandwidth": 0.25,
+  "proportion_wide": 0.2,
+  "pivot_interval_months": 1
+ },
+ "default_palette": "nextstrain",
+ "default_top_n": 12,
+ "text": {
+  "caveat": "Frequencies displayed in this dashboard represent taxa present in the supplied JHH local phylogeny builds and supplied Nextstrain seasonal-flu surveillance builds. They do not necessarily represent true circulating prevalence, complete regional prevalence, or all influenza sequences available in GISAID.",
+  "caveat_points": [
+   "JHH local datasets are not downsampled; they include all sequences included in the supplied local build.",
+   "Nextstrain seasonal-flu global datasets are downsampled according to the methodology used to create the supplied seasonal-flu build.",
+   "Comparisons represent differences in the composition of the analyzed local and global datasets.",
+   "The global dataset should not be interpreted as an unbiased representation of all globally circulating influenza viruses.",
+   "All dates, update times, metadata, and provenance values are extracted from the input JSON files where possible.",
+   "If a provenance field is absent from a JSON file it is shown as \u201cNot available in source JSON\u201d rather than inferred."
+  ],
+  "footnote": "Local frequencies reflect taxa represented in the selected JHH local Nextstrain build and include all sequences in that build. Global frequencies reflect taxa represented in the selected Nextstrain seasonal-flu build, which may be downsampled according to its source pipeline. These frequencies compare the composition of the analyzed datasets and should not be interpreted as unbiased estimates of all circulating influenza viruses or all GISAID submissions.",
+  "alignment": "Shared timepoints: both builds are shown at one set of timepoints, so the local and global panels line up exactly. The timepoints are the frequency pivots of the build with the coarser pivot spacing (e.g. the monthly JHH pivots when the seasonal-flu build has weekly pivots), extended at the same spacing over the other build's dates. At each timepoint the other build's value is taken from its nearest pivot, only if that pivot is within half of its own pivot spacing (about 3.5 days for weekly pivots); the pivot used and its offset are shown on hover. No interpolation or averaging is done. 'Native pivots' shows each build at its own pivots instead.",
+  "counts": "Counts (N) are the number of tips in the build whose collection date falls in the interval around each timepoint (midpoint to midpoint between timepoints). Frequencies themselves are the KDE-smoothed tip frequencies used by Auspice, so frequency is not exactly numerator/denominator.",
+  "positive": "Higher relative frequency in JHH local surveillance",
+  "negative": "Higher relative frequency in Nextstrain global surveillance",
+  "local_name": "JHH local surveillance",
+  "global_name": "Nextstrain seasonal-flu global surveillance",
+  "not_available": "Not available in source JSON",
+  "local_downsampling": "Not downsampled: includes all sequences included in this JHH build.",
+  "global_downsampling": "Downsampled according to the methodology used to generate this Nextstrain seasonal-flu build.",
+  "freq_source_labels": {
+   "imported": "Imported frequency JSON",
+   "embedded": "Embedded frequency data",
+   "recomputed": "Recomputed from Auspice JSON"
+  }
+ }
+}

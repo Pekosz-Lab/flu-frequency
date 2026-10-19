@@ -1,0 +1,11 @@
+#!/bin/sh
+# Blocks commits that would add surveillance data. Enable once per clone:
+#   git config core.hooksPath .githooks
+bad=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^(data|store|store-demo|exports)/|\.(duckdb|parquet)$|^config/manifest(\.demo)?\.yaml$|_tip-frequencies\.json$|_root-sequence\.json$' )
+json=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.json$' | grep -vE '^frontend/(package|package-lock|tsconfig)\.json$|^frontend/src/engine/web-config\.json$')
+if [ -n "$bad$json" ]; then
+  echo "BLOCKED: these staged files may contain JHH or GISAID-derived data:" >&2
+  printf '  %s\n' $bad $json >&2
+  echo "Unstage them (git restore --staged <file>). Data lives in data/ and store/, which are git-ignored." >&2
+  exit 1
+fi
