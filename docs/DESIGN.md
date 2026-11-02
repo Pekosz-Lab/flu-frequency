@@ -278,60 +278,79 @@ Incompatible pairs (subtype/segment mismatch, wrong source types) return 400.
 ## 9. Frontend component architecture
 
 ```
-App                      selection state, debounced/cancellable /api/compare
+App                      selection state, debounced/cancellable /api/compare,
+│                        keeps start/end on the range the date mode asks for (see below)
 ├── Sidebar
-│   ├── subtype select + segment radio (only segments with a valid pair are enabled)
-│   ├── Color by + GenotypeMenu (gene select, position input, suggested positions)
-│   ├── global build select + BuildCard   (resolution, dates, tips, downsampling)
-│   ├── local build select (if >1) + BuildCard
-│   ├── DateControls (presets, start/end, local/global/shared ranges)
-│   ├── Top-N, palette, projections
-│   └── FilterPanel ×2 (Local filters / Global filters: chips, counts, reset, "Not available in source JSON")
+│   ├── Dataset: subtype + segment buttons (only combinations with a valid pair are enabled)
+│   ├── Compare: JHH local (build select if >1) and Nextstrain global (resolution buttons),
+│   │            each with a one-line BuildCard (tips, latest sample; details on click)
+│   ├── Color by: Clade | Subclade | Genotype (+ gene select, positions, suggested positions)
+│   └── Display options (collapsed): Top-N, palette, time axis (shared | native), projections
 └── main
-    ├── banners (synthetic data, caveat)
-    ├── chart card: title, view toggle, ExportMenu ("Download figure"),
-    │   ActiveFilterBar (scope-coloured removable chips, Edit, Clear all)
-    │   ├── FrequencyChart (stacked panels | overlay | difference)
-    │   ├── Timeline (range brush with coverage bars, snapshot slider + play)
-    │   └── Attribution (labels, JSON dates, fetch and processing timestamps)
-    ├── SnapshotTable (sortable, searchable, click to highlight)
-    ├── ProvenancePanel (local / global / comparison, source tags)
-    └── Methodology
+    ├── banners (public website, synthetic data)
+    ├── chart card: title, view toggle, ExportMenu ("Download")
+    │   ├── FilterBar: one Auspice-style search box ("Filter data") with scope-coloured chips,
+    │   │   and tips-included bars for each build
+    │   ├── FrequencyChart (stacked panels | overlay | difference) + one-line notes
+    │   ├── Timeline: DateControls (Overlap | 6/12/24 mo | All, exact dates), range brush with
+    │   │   coverage bars, snapshot slider + play
+    │   ├── Attribution (labels, JSON dates, fetch and processing timestamps)
+    │   └── caveat (full wording from constants.py)
+    ├── SnapshotTable (click a header to sort, search, click a row to highlight)
+    └── "Provenance & methods" (collapsed): ProvenancePanel + Methodology
 ```
+
+**Filtering.** Typing in the search box lists matching values across every filterable
+attribute, each tagged with its scope (Both / Global / Local) and its tip counts in each
+build; typing an attribute name (e.g. "region") offers that attribute's full value list.
+With an empty box, the attributes are listed by scope. A value recorded in both builds
+(an attribute in `shared_filters`) is offered once, applied to **both** datasets; the
+chip's scope menu moves that filter to the local or global build only (values the target
+build lacks are dropped). Keyboard: ↑/↓, Enter, Esc (back / close), Backspace on an
+empty box removes the last chip. The request body is unchanged (`shared_filters`,
+`local_filters`, `global_filters`).
+
+**Date range.** `Selection.range` is `"overlap"` (default), a number of months, `"all"`
+or `"custom"`. For the first three, App compares each response's `date_ranges` with the
+dates it asked for and, if they differ, asks again with the target range: `overlap` =
+`date_ranges.shared` (dates where both builds have data, after filters), `N` months =
+the last N months of the overlap, `all` = no limits. `date_ranges` is computed before the
+range restriction, so this settles in one extra request. Dragging the brush or typing a
+date switches to `custom`. With no overlap, `overlap` falls back to all dates.
 
 ## 10. Dashboard layout (wireframe)
 
-Follows the lab's sketch: left column of controls; right card with JHH local
-frequencies stacked above global frequencies sharing the time axis, "proportion"
-on y, "Download figure" top right, data attribution with timestamps bottom right.
-
 ```
-┌───────────────────────┬──────────────────────────────────────────────────────────┐
-│ Subtype  [A/H3N2   ▾] │ ⚠ Relative frequencies only. …                           │
-│ [ HA | NA ]           │ ┌──────────────────────────────────────────────────────┐ │
-│ Color by [Subclade ▾] │ │ A/H3N2 HA · Subclade   [Side|Overlay|Diff] [Download]│ │
-│  └ genotype: gene,pos │ │ JHH local surveillance ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒   legend │ │
-│ Global build [2y   ▾] │ │ proportion                                           │ │
-│  card: dates, tips…   │ │ Nextstrain global      ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒          │ │
-│ Local build card      │ │                     time                             │ │
-│ Dates [3|6|12|24|Full]│ │ Range  ═══[▮════════════▮]  local/global/shared bars │ │
-│ Top N, palette        │ │ Snapshot ▶ ──────●─────                               │ │
-│ Local filters  chips  │ │                    Local … updated … │ Global … fetched│ │
-│ Global filters chips  │ └──────────────────────────────────────────────────────┘ │
-│                       │ Snapshot table · Provenance · Methodology                │
-└───────────────────────┴──────────────────────────────────────────────────────────┘
+┌──────────────────────┬────────────────────────────────────────────────────────────┐
+│ DATASET              │ ┌────────────────────────────────────────────────────────┐ │
+│ [H1N1pdm|H3N2|B/Vic] │ │ A/H3N2 HA · Subclade        [Side|Overlay|Diff] [Download]│
+│ [ HA | NA ]          │ │ JHH local vs Nextstrain global 2y                      │ │
+│ COMPARE              │ │ [⌕ Both Subclade: J.2 ×  Global Region: N. America × ] │ │
+│ ▌JHH local           │ │                                     Local ▬▬▬ 420/420  │ │
+│ ▌ 420 tips · to …  ⓘ │ │ JHH local       ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒   legend    │ │
+│ ▌Nextstrain global   │ │ Nextstrain glob ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒             │ │
+│ ▌[6m| 2y |12y]       │ │ Dates [Overlap|6 mo|12 mo|24 mo|All]  [start]–[end]    │ │
+│ ▌ 900 tips · to … ⓘ  │ │       ═══[▮══════════▮]  local/global/overlap bars     │ │
+│ COLOR BY             │ │ Snapshot ▶ ──────●─────                                 │ │
+│ [Clade|Subclade|Geno]│ │ Local … updated … · Global … fetched … · caveat         │ │
+│ ▸ Display options    │ └────────────────────────────────────────────────────────┘ │
+│                      │ Snapshot table                                             │
+│                      │ ▸ Provenance & methods                                     │
+└──────────────────────┴────────────────────────────────────────────────────────────┘
 ```
 
 ## 11. Example user workflows
 
 1. **Weekly meeting figure.** `ffc update` → `ffc serve --open` → H3N2, HA, Subclade,
-   global 2y, "12 mo" → Download figure → PDF. The PDF carries build dates and caveats.
-2. **Is a subclade over-represented locally?** Difference view; the snapshot table
-   sorted by "Largest local enrichment"; click a row to highlight it in the chart.
+   global 2y (the default view already covers the dates both builds share) → Download → PDF.
+   The PDF carries build dates and caveats.
+2. **Is a subclade over-represented locally?** Difference view; the snapshot table is
+   sorted by local − global (largest local enrichment first); click a row to highlight it.
 3. **Antigenic site check.** Color by Genotype → HA1 → click suggested positions (e.g.
    158, 189). Genes whose coordinates differ between builds are flagged.
-4. **Like-for-like region.** Global filters → Region = North America; local filters →
-   QC status = good. Counts and chips update; both filters appear in exports.
+4. **Like-for-like region.** Filter box → type "North America" → pick Region (Global);
+   type "good" → pick QC status (Local). Counts and chips update; both filters appear in
+   exports.
 5. **New season.** Fetch, ingest; unchanged builds are skipped; build cards show the
    new `updated` and fetch dates; projections stay hidden unless toggled.
 

@@ -1,6 +1,7 @@
 export type SourceType = "local" | "global";
 export type Grouping = "clade" | "subclade" | "genotype";
 export type View = "stacked" | "overlay" | "difference";
+export type RangeMode = "overlap" | "all" | "custom" | number;
 
 export interface BuildInfo {
   build_id: string;
@@ -82,6 +83,9 @@ export interface Selection {
   sharedFilters: Filters;
   start: string | null;
   end: string | null;
+  /** how start/end are chosen: "overlap" (default) keeps them on the range where both datasets have data,
+   *  a number = that many months ending at the overlap's end, "all" = every date, "custom" = set by hand */
+  range: RangeMode;
   topN: number;
   palette: "nextstrain" | "colorblind";
   view: View;

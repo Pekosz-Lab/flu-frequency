@@ -41,24 +41,27 @@ test("public website: homepage, analysis from public builds only, run-locally pa
   await expect(page.getByTestId("frequency-chart").locator(".main-svg").first()).toBeVisible({ timeout: 30_000 });
 
   // a full workflow in the browser engine
-  await page.selectOption("#subtype", "h3n2");
+  await expect(page.getByRole("button", { name: "Overlap" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("radiogroup", { name: "Subtype" }).getByRole("radio", { name: /H3N2/ }).click();
   await expect(page.locator(".buildcard.global")).toContainText("tips");
-  await page.getByRole("tab", { name: /Both datasets/ }).click();
-  await page.locator(".field-btn", { hasText: "Subclade" }).click();
-  await page.locator(".vrow").first().click();
-  await expect(page.locator(".filterbar .fchip.both")).toHaveCount(1);
-  await page.selectOption("#grouping", "genotype");
+  await page.getByRole("combobox", { name: "Filter data" }).click();
+  await page.locator(".field-opt", { hasText: "Subclade" }).first().click();
+  await page.locator(".value-opt").first().click();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".fchip.both")).toHaveCount(1);
+  await page.getByRole("radio", { name: "Genotype", exact: true }).click();
   await page.locator(".chips.suggest .chip").first().click();
   await expect(page.locator("table.snap tbody tr").first()).toBeVisible();
   await page.getByRole("tab", { name: "Difference" }).click();
   await expect(page.getByTestId("alignment-note")).toContainText("same timepoints");
 
   // exports work in the browser; no PDF on the website
-  await page.getByRole("button", { name: /Download figure/ }).click();
+  await page.getByRole("button", { name: /Download/ }).click();
   await expect(page.getByRole("menuitem", { name: "PDF" })).toHaveCount(0);
   const [png] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: /PNG/ }).click()]);
   expect(png.suggestedFilename()).toMatch(/\.png$/);
-  await page.getByRole("button", { name: /Download figure/ }).click();
+  await page.getByRole("button", { name: /Download/ }).click();
   const [csv] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: "Trajectories CSV", exact: true }).click()]);
   const text = readFileSync(await csv.path(), "utf8");
   expect(text).toContain("# Caveat:");

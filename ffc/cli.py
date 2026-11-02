@@ -121,7 +121,7 @@ def cmd_demo(args):
     run_ingest(manifest, store, project / "config" / "settings.yaml",
                project / "config" / "taxon_harmonization.yaml", force=True,
                colors_path=project / "data" / "demo" / "colors.json")
-    print("Demo ready. Start it with:  ffc serve --store store-demo --open")
+    print("Demo ready. Start it with:  ffc --store store-demo serve --open")
     return 0
 
 

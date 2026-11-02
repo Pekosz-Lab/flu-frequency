@@ -48,7 +48,7 @@ Try it with invented data first:
 
 ```shell
 ffc demo                                # writes SYNTHETIC builds, builds store-demo/
-ffc serve --store store-demo --open     # opens http://127.0.0.1:8050
+ffc --store store-demo serve --open     # opens http://127.0.0.1:8050
 ```
 
 ## Run it with private builds: `ffc start`
@@ -104,24 +104,26 @@ You can also skip `ffc fetch` and list JSONs by hand: copy
 
 ## The dashboard
 
-- **Left panel:** subtype (A/H1N1pdm, A/H3N2, B/Victoria), segment (HA, NA),
-  colour by clade / subclade / genotype (genotype has a gene + position submenu),
-  time axis (shared timepoints, or each build's native pivots), and **Filters** with
-  three tabs: **Both datasets** (one filter applied to both builds, offered only for
-  attributes recorded in both JSONs with values in common, e.g. subclade; pairings
-  are set in `config/settings.yaml` → `shared_filters`), **JHH local** and
-  **Nextstrain global** (one build only). Bars show how many tips of each build are
-  included, and the active filters are listed as removable chips above the chart.
-  the global build to compare (6m … 12y), the local build, dates (presets, date
-  pickers), Top-N, palette, and separate **Local filters** and **Global filters**.
-- **Main panel:** JHH local frequencies above global frequencies on a shared time
-  axis, or an overlay, or the local − global difference in percentage points. A
-  range brush shows where local, global and shared data exist; the snapshot slider
-  (with play) steps through months.
-- **Snapshot table**, **provenance panel** (each value tagged JSON / manifest /
-  derived / missing), **methodology**, and **Download figure** (PNG, SVG, PDF, CSV,
-  TSV, JSON, HTML report). Every figure carries build labels, dates, filters and
-  the caveat footnote.
+- **Left panel:** dataset (subtype, segment), the two builds to compare (JHH local, and
+  the Nextstrain global resolution 6m … 12y; click a build's line for its details),
+  colour by clade / subclade / genotype (genotype adds gene + positions), and
+  **Display options** (Top-N, palette, shared or native time axis, projections).
+- **Filter data:** one search box above the chart, as in Auspice. Type a value (a region,
+  country, subclade…) or an attribute name and pick from the list; each choice becomes a
+  chip. Values recorded in both builds (pairings set in `config/settings.yaml` →
+  `shared_filters`) are applied to **both** datasets; the chip's scope menu switches a
+  filter to the JHH local or Nextstrain global build only. Bars beside the box show how
+  many tips of each build are included.
+- **Dates:** by default the view covers exactly the dates where **both** datasets have
+  data (after filters), so the two panels line up. Presets: Overlap, last 6/12/24 months
+  of the overlap, All; or drag the range brush / type exact dates. The snapshot slider
+  (with play) steps through shared timepoints.
+- **Main panel:** JHH local frequencies above global frequencies on a shared time axis,
+  or an overlay, or the local − global difference in percentage points.
+- **Snapshot table** (click a column to sort), **Provenance & methods** (collapsed; each
+  value tagged JSON / manifest / derived / missing), and **Download** (PNG, SVG, PDF, CSV,
+  TSV, JSON, HTML report). Every figure carries build labels, dates, filters and the
+  caveat footnote.
 
 ## The public website
 
@@ -162,7 +164,7 @@ python scripts/export_web_config.py      # after editing config/*.yaml or ffc/co
 pytest                                   # backend + ingestion tests (synthetic data)
 cd frontend && npm install && npm run dev  # UI with hot reload (proxies to ffc serve)
 npm run build                            # rebuilds frontend/dist (committed, so users need no Node)
-ffc demo && ffc serve --store store-demo # then: npm run test:e2e  (website test: serve site-dist at
+ffc demo && ffc --store store-demo serve # then: npm run test:e2e  (website test: serve site-dist at
                                          #   http://127.0.0.1:8090/flu-freq-compare/, e.g. via python -m http.server)
 ```
 

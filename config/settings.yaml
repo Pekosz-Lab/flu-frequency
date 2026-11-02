@@ -27,7 +27,7 @@ metadata_filters:
   # Fields with more distinct values than this are not offered (e.g. IDs).
   max_distinct_values: 400
 
-# Filters that apply to BOTH datasets at once ("Both datasets" tab).
+# Filters that apply to BOTH datasets at once ("Both" scope in the filter box).
 # A pair of fields is offered when it is listed below (or has the same name in
 # both builds) AND the two fields have at least one value in common; of the
 # listed candidates, the pair sharing the most values is used. The fields used

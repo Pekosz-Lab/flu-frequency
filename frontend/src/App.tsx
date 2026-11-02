@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { compare, getFields, getGenotypeOptions, getOptions, getSharedFilters, IS_WEB } from "./api";
 import { onProgress, type Progress } from "./webSource";
 import type { BuildInfo, CompareResult, FieldInfo, GenotypeOptions, Options, Selection, SharedFilterOptions } from "./types";
-import { ActiveFilterBar, type FilterTab } from "./components/FilterPanel";
+import { targetRange } from "./dateRange";
+import FilterBar from "./components/FilterPanel";
 import Sidebar from "./components/Sidebar";
 import FrequencyChart from "./components/FrequencyChart";
 import SnapshotTable from "./components/SnapshotTable";
@@ -53,6 +54,12 @@ export function buildsFor(opts: Options, subtype: string, segment: string, type:
     .sort((a, b) => resRank(a.resolution) - resRank(b.resolution) || a.label.localeCompare(b.label));
 }
 
+const VIEWS = [
+  ["stacked", "Side by side"],
+  ["overlay", "Overlay"],
+  ["difference", "Difference"],
+] as const;
+
 export default function App() {
   const [opts, setOpts] = useState<Options | null>(null);
   const [sel, setSel] = useState<Selection | null>(null);
@@ -68,11 +75,6 @@ export default function App() {
   useEffect(() => {
     if (IS_WEB) onProgress(setProgress);
   }, []);
-  const [filterTab, setFilterTab] = useState<FilterTab>("both");
-  const editFilters = useCallback((t: FilterTab) => {
-    setFilterTab(t);
-    document.getElementById("filters")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
 
   useEffect(() => {
     getOptions()
@@ -86,6 +88,7 @@ export default function App() {
           view: "stacked",
           start: null,
           end: null,
+          range: "overlap",
           snapshotMode: "range",
           snapshotTime: null,
           includeProjection: false,
@@ -163,8 +166,17 @@ export default function App() {
       const c = new AbortController();
       ctrl.current = c;
       setLoading(true);
+      let refetch = false;
       compare(sel, c.signal)
         .then((r) => {
+          // keep the dates on the range the current mode asks for (by default: where both datasets have data).
+          // The data ranges depend on the builds and filters, not on the dates asked for, so this settles in one step.
+          const want = targetRange(sel.range, r.date_ranges);
+          if (want && (want[0] !== sel.start || want[1] !== sel.end)) {
+            refetch = true;
+            setSel((cur) => (cur && cur.range === sel.range ? { ...cur, start: want[0], end: want[1] } : cur));
+            return;
+          }
           setResult(r);
           setError(null);
           if (IS_WEB) getOptions().then(setOpts); // refresh build cards with the loaded builds' metadata
@@ -173,7 +185,7 @@ export default function App() {
           if (e.name !== "AbortError") setError(String(e.message ?? e));
         })
         .finally(() => {
-          if (ctrl.current === c) setLoading(false);
+          if (ctrl.current === c && !refetch) setLoading(false);
         });
     }, 120);
     return () => clearTimeout(t);
@@ -187,80 +199,84 @@ export default function App() {
   if (!opts || !sel) return <div className="fatal">Loading…</div>;
   if (!opts.builds.length) return <div className="fatal">The store contains no builds. Run <code>ffc fetch</code> and <code>ffc ingest</code>.</div>;
 
+  const subtypeLabel = opts.subtypes.find((s) => s.id === sel.subtype)?.label;
+  const groupingLabel = sel.grouping === "genotype" ? `Genotype ${sel.gene} ${sel.positions.join(", ")}` : sel.grouping === "clade" ? "Clade" : "Subclade";
+  const loadMsg = progress ? `Downloading ${progress.label} from nextstrain.org… ${(progress.bytes / 1e6).toFixed(1)} MB` : null;
+
   return (
     <div className="app">
-      <Sidebar
-        opts={opts}
-        sel={sel}
-        update={update}
-        localFields={localFields}
-        globalFields={globalFields}
-        geno={geno}
-        result={result}
-        localBuild={localBuild}
-        globalBuild={globalBuild}
-        shared={shared}
-        filterTab={filterTab}
-        setFilterTab={setFilterTab}
-      />
+      <Sidebar opts={opts} sel={sel} update={update} geno={geno} localBuild={localBuild} globalBuild={globalBuild} />
       <main className="main">
         {IS_WEB && <SiteNav />}
         {IS_WEB && (
           <div className="banner public" role="note">
-            <strong>Public builds only.</strong> This website reads public datasets from nextstrain.org: the Nextstrain seasonal-flu builds and the JHH builds the lab has published in the PekoszLab-Public group. It never accesses private builds. To analyse private builds,{" "}
+            <strong>Public builds only.</strong> This site reads public nextstrain.org datasets and never accesses private builds. For private builds,{" "}
             <a href="../local/">run the app on your own computer</a>.
           </div>
         )}
-        {synthetic && <div className="banner synthetic">SYNTHETIC DEMO DATA: invented sequences for trying the dashboard. Not surveillance data.</div>}
-        <div className="banner caveat" role="note">
-          <strong>Relative frequencies only.</strong> {opts.text.caveat}
-        </div>
+        {synthetic && <div className="banner synthetic">SYNTHETIC DEMO DATA: invented sequences, not surveillance data.</div>}
         <section className="card chart-card">
           <header className="chart-head">
             <div>
               <h1>
-                {opts.subtypes.find((s) => s.id === sel.subtype)?.label} {sel.segment} ·{" "}
-                {sel.grouping === "genotype" ? `Genotype ${sel.gene} ${sel.positions.join(", ")}` : sel.grouping === "clade" ? "Clade" : "Subclade"} frequencies
+                {subtypeLabel} {sel.segment} · {groupingLabel}
               </h1>
-              <p className="sub">JHH local surveillance compared with the Nextstrain seasonal-flu {globalBuild?.resolution ?? ""} build</p>
+              <p className="sub">
+                <span className="k-local">JHH local</span> vs <span className="k-global">Nextstrain global{globalBuild?.resolution ? ` ${globalBuild.resolution}` : ""}</span>
+              </p>
             </div>
             <div className="head-actions">
               <div className="seg-toggle" role="tablist" aria-label="Display mode">
-                {(["stacked", "overlay", "difference"] as const).map((v) => (
+                {VIEWS.map(([v, label]) => (
                   <button key={v} role="tab" aria-selected={sel.view === v} className={sel.view === v ? "on" : ""} onClick={() => update({ view: v })}>
-                    {v === "stacked" ? "Side by side" : v === "overlay" ? "Overlay" : "Difference"}
+                    {label}
                   </button>
                 ))}
               </div>
               <ExportMenu sel={sel} result={result} />
             </div>
           </header>
-          <ActiveFilterBar sel={sel} update={update} shared={shared} onEdit={editFilters} localFields={localFields} globalFields={globalFields} />
-          {progress && result && (
+          <FilterBar
+            sel={sel}
+            update={update}
+            localFields={localFields}
+            globalFields={globalFields}
+            shared={shared}
+            included={{ local: result?.local.tips_included, global: result?.global.tips_included }}
+            totals={{ local: localBuild?.total_tip_count, global: globalBuild?.total_tip_count }}
+          />
+          {loadMsg && result && (
             <div className="loadbar" role="status">
-              Downloading {progress.label} from nextstrain.org… {(progress.bytes / 1e6).toFixed(1)} MB
+              {loadMsg}
             </div>
           )}
           {error && <div className="banner error">{error}</div>}
           {sel.grouping === "genotype" && (!sel.gene || !sel.positions.length) ? (
-            <div className="empty">Choose a gene and at least one position in the genotype menu.</div>
+            <div className="empty">Choose a gene and at least one position under “Color by”.</div>
           ) : result ? (
             <>
               <FrequencyChart result={result} sel={sel} highlight={highlight} text={opts.text} loading={loading} />
               <Timeline result={result} sel={sel} update={update} />
             </>
           ) : (
-            <div className="empty">{progress ? `Downloading ${progress.label} from nextstrain.org… ${(progress.bytes / 1e6).toFixed(1)} MB` : loading ? (IS_WEB ? "Loading builds from nextstrain.org…" : "Loading…") : "No data"}</div>
+            <div className="empty">{loadMsg ?? (loading ? (IS_WEB ? "Loading builds from nextstrain.org…" : "Loading…") : "No data")}</div>
           )}
           {result && <Attribution result={result} store={opts.store} />}
+          <p className="caveat" role="note">
+            <strong>Relative frequencies only.</strong> {opts.text.caveat}
+          </p>
         </section>
-        {result && (
-          <>
-            <SnapshotTable result={result} sel={sel} update={update} highlight={highlight} setHighlight={setHighlight} />
-            <ProvenancePanel result={result} localBuild={localBuild} globalBuild={globalBuild} text={opts.text} />
-          </>
-        )}
-        <Methodology text={opts.text} />
+        {result && <SnapshotTable result={result} sel={sel} update={update} highlight={highlight} setHighlight={setHighlight} />}
+        <section className="card details-card">
+          <details>
+            <summary>
+              <h2>Provenance &amp; methods</h2>
+              <span className="muted">build sources, dates, fields used, how frequencies are computed</span>
+            </summary>
+            {result && <ProvenancePanel result={result} localBuild={localBuild} globalBuild={globalBuild} text={opts.text} />}
+            <Methodology text={opts.text} />
+          </details>
+        </section>
       </main>
     </div>
   );

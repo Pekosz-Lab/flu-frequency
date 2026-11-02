@@ -69,16 +69,11 @@ export default function ProvenancePanel({ result, text }: { result: CompareResul
   const c = result.provenance.comparison;
   const dr = result.date_ranges;
   return (
-    <section className="card" aria-label="Provenance and status">
-      <header className="card-head">
-        <div>
-          <h2>Provenance and status</h2>
-          <p className="sub">
-            Tags show where each value comes from: <span className="src src-json">JSON</span> source file, <span className="src src-manifest">manifest</span> deployment config,{" "}
+    <div className="prov-wrap" aria-label="Provenance and status">
+      <p className="sub">
+            Value sources: <span className="src src-json">JSON</span> source file, <span className="src src-manifest">manifest</span> deployment config,{" "}
             <span className="src src-derived">derived</span> computed from the JSON, <span className="src src-missing">missing</span> {text.not_available}.
-          </p>
-        </div>
-      </header>
+      </p>
       <div className="prov-grid">
         <Side title="Local surveillance" p={result.provenance.local} cls="local" />
         <Side title="Global surveillance" p={result.provenance.global} cls="global" />
@@ -101,6 +96,6 @@ export default function ProvenancePanel({ result, text }: { result: CompareResul
           </dl>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

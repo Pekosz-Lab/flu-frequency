@@ -1,29 +1,57 @@
 import { useEffect, useMemo, useState } from "react";
-import type { BuildInfo, CompareResult, FieldInfo, GenotypeOptions, Options, Selection, SharedFilterOptions } from "../types";
+import type { BuildInfo, GenotypeOptions, Options, Selection } from "../types";
 import { buildsFor, segmentsFor } from "../App";
-import FiltersSection, { type FilterTab } from "./FilterPanel";
-import DateControls from "./DateControls";
 
 interface Props {
   opts: Options;
   sel: Selection;
   update: (p: Partial<Selection>) => void;
-  localFields: FieldInfo[];
-  globalFields: FieldInfo[];
   geno: GenotypeOptions | null;
-  result: CompareResult | null;
   localBuild?: BuildInfo;
   globalBuild?: BuildInfo;
-  shared: SharedFilterOptions | null;
-  filterTab: FilterTab;
-  setFilterTab: (t: FilterTab) => void;
 }
 
-export default function Sidebar({ opts, sel, update, localFields, globalFields, geno, result, localBuild, globalBuild, shared, filterTab, setFilterTab }: Props) {
+/** A row of mutually exclusive buttons (radio group). */
+function Seg<T extends string | number>({
+  label,
+  value,
+  items,
+  onChange,
+  id,
+}: {
+  label: string;
+  value: T;
+  items: { v: T; text: string; disabled?: boolean; title?: string }[];
+  onChange: (v: T) => void;
+  id?: string;
+}) {
+  return (
+    <div className="segbar" role="radiogroup" aria-label={label} id={id}>
+      {items.map((it) => (
+        <button
+          key={String(it.v)}
+          role="radio"
+          aria-checked={value === it.v}
+          className={value === it.v ? "on" : ""}
+          disabled={it.disabled}
+          title={it.title}
+          onClick={() => onChange(it.v)}
+        >
+          {it.text}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export default function Sidebar({ opts, sel, update, geno, localBuild, globalBuild }: Props) {
   const segments = segmentsFor(opts, sel.subtype);
   const locals = buildsFor(opts, sel.subtype, sel.segment, "local");
   const globals = buildsFor(opts, sel.subtype, sel.segment, "global");
   const validGlobals = new Set(opts.pairs.filter((p) => p.local === sel.localId).map((p) => p.global));
+  // resolution buttons when each global build has its own resolution, otherwise a list
+  const resolutions = globals.map((b) => b.resolution ?? "");
+  const globalsAsButtons = globals.length <= 6 && resolutions.every((r) => r) && new Set(resolutions).size === resolutions.length;
 
   return (
     <aside className="sidebar">
@@ -32,126 +60,124 @@ export default function Sidebar({ opts, sel, update, localFields, globalFields, 
       </div>
 
       <section className="ctl">
-        <label htmlFor="subtype">Subtype</label>
-        <select id="subtype" value={sel.subtype} onChange={(e) => update({ subtype: e.target.value })}>
-          {opts.subtypes.map((s) => (
-            <option key={s.id} value={s.id} disabled={!segmentsFor(opts, s.id).length}>
-              {s.label}
-              {!segmentsFor(opts, s.id).length ? " (no local+global builds)" : ""}
-            </option>
-          ))}
-        </select>
-        <div className="segbar" role="radiogroup" aria-label="Segment">
-          {opts.enabled_segments.map((s) => (
-            <button
-              key={s}
-              role="radio"
-              aria-checked={sel.segment === s}
-              className={sel.segment === s ? "on" : ""}
-              disabled={!segments.includes(s)}
-              title={!segments.includes(s) ? "No compatible local and global builds for this segment" : ""}
-              onClick={() => update({ segment: s })}
-            >
-              {s}
-            </button>
-          ))}
+        <span className="ctl-label">Dataset</span>
+        <Seg
+          label="Subtype"
+          id="subtype"
+          value={sel.subtype}
+          onChange={(v) => update({ subtype: v })}
+          items={opts.subtypes.map((s) => ({
+            v: s.id,
+            text: s.label,
+            disabled: !segmentsFor(opts, s.id).length,
+            title: !segmentsFor(opts, s.id).length ? "No local + global builds" : undefined,
+          }))}
+        />
+        <Seg
+          label="Segment"
+          value={sel.segment}
+          onChange={(v) => update({ segment: v })}
+          items={opts.enabled_segments.map((s) => ({
+            v: s,
+            text: s,
+            disabled: !segments.includes(s),
+            title: !segments.includes(s) ? "No compatible local and global builds for this segment" : undefined,
+          }))}
+        />
+      </section>
+
+      <section className="ctl">
+        <span className="ctl-label">Compare</span>
+        <div className="side local">
+          <div className="side-name">JHH local</div>
+          {locals.length > 1 && (
+            <select id="local" aria-label="JHH local build" value={sel.localId} onChange={(e) => update({ localId: e.target.value })}>
+              {locals.map((b) => (
+                <option key={b.build_id} value={b.build_id}>
+                  {b.label}
+                </option>
+              ))}
+            </select>
+          )}
+          {localBuild && <BuildCard b={localBuild} />}
+        </div>
+        <div className="side global">
+          <div className="side-name">Nextstrain global</div>
+          {globalsAsButtons ? (
+            <Seg
+              label="Global build"
+              id="global"
+              value={sel.globalId}
+              onChange={(v) => update({ globalId: v })}
+              items={globals.map((b) => ({ v: b.build_id, text: b.resolution!, disabled: !validGlobals.has(b.build_id), title: b.label }))}
+            />
+          ) : (
+            <select id="global" aria-label="Global build" value={sel.globalId} onChange={(e) => update({ globalId: e.target.value })}>
+              {globals.map((b) => (
+                <option key={b.build_id} value={b.build_id} disabled={!validGlobals.has(b.build_id)}>
+                  {b.resolution ? `${b.resolution} · ` : ""}
+                  {b.label}
+                </option>
+              ))}
+            </select>
+          )}
+          {globalBuild && <BuildCard b={globalBuild} />}
         </div>
       </section>
 
       <section className="ctl">
-        <label htmlFor="grouping">Color by</label>
-        <select id="grouping" value={sel.grouping} onChange={(e) => update({ grouping: e.target.value as Selection["grouping"] })}>
-          <option value="clade">Clade</option>
-          <option value="subclade">Subclade</option>
-          <option value="genotype" disabled={!geno?.genes.some((g) => g.available)}>
-            Genotype
-          </option>
-        </select>
-        {sel.grouping !== "genotype" && result && (
-          <p className="hint">
-            JSON field: local <code>{result.provenance.local[`${sel.grouping}_field`]?.value}</code>, global{" "}
-            <code>{result.provenance.global[`${sel.grouping}_field`]?.value}</code>
-          </p>
-        )}
+        <span className="ctl-label">Color by</span>
+        <Seg
+          label="Color by"
+          id="grouping"
+          value={sel.grouping}
+          onChange={(v) => update({ grouping: v })}
+          items={[
+            { v: "clade", text: "Clade" },
+            { v: "subclade", text: "Subclade" },
+            { v: "genotype", text: "Genotype", disabled: !geno?.genes.some((g) => g.available), title: "Amino-acid or nucleotide state at chosen positions" },
+          ]}
+        />
         {sel.grouping === "genotype" && <GenotypeMenu geno={geno} sel={sel} update={update} />}
       </section>
 
-      <section className="ctl">
-        <label htmlFor="global">Global surveillance build to compare</label>
-        <select id="global" value={sel.globalId} onChange={(e) => update({ globalId: e.target.value })}>
-          {globals.map((b) => (
-            <option key={b.build_id} value={b.build_id} disabled={!validGlobals.has(b.build_id)}>
-              {b.resolution ? `${b.resolution} · ` : ""}
-              {b.label}
-            </option>
-          ))}
-        </select>
-        {globalBuild && <BuildCard b={globalBuild} />}
-      </section>
-
-      <section className="ctl">
-        <label htmlFor="local">JHH local build</label>
-        {locals.length > 1 ? (
-          <select id="local" value={sel.localId} onChange={(e) => update({ localId: e.target.value })}>
-            {locals.map((b) => (
-              <option key={b.build_id} value={b.build_id}>
-                {b.label}
-              </option>
-            ))}
-          </select>
-        ) : null}
-        {localBuild && <BuildCard b={localBuild} />}
-      </section>
-
-      <section className="ctl">
-        <label>Dates</label>
-        <DateControls sel={sel} update={update} result={result} />
-      </section>
-
-      <FiltersSection
-        sel={sel}
-        update={update}
-        localFields={localFields}
-        globalFields={globalFields}
-        shared={shared}
-        tab={filterTab}
-        setTab={setFilterTab}
-        included={{ local: result?.local.tips_included, global: result?.global.tips_included }}
-        totals={{ local: localBuild?.total_tip_count, global: globalBuild?.total_tip_count }}
-      />
-
-      <section className="ctl">
-        <label htmlFor="topn">Taxa shown</label>
-        <div className="row">
+      <details className="ctl more">
+        <summary className="ctl-label">Display options</summary>
+        <label className="field-row">
+          <span>Taxa</span>
           <select id="topn" value={sel.topN} onChange={(e) => update({ topN: Number(e.target.value) })}>
             {[0, 5, 8, 12, 20].map((n) => (
               <option key={n} value={n}>
-                {n === 0 ? "All taxa" : `Top ${n} + Other`}
+                {n === 0 ? "All" : `Top ${n} + Other`}
               </option>
             ))}
           </select>
+        </label>
+        <label className="field-row">
+          <span>Colours</span>
           <select aria-label="Palette" value={sel.palette} onChange={(e) => update({ palette: e.target.value as Selection["palette"] })}>
-            <option value="nextstrain">Nextstrain colours</option>
+            <option value="nextstrain">Nextstrain</option>
             <option value="colorblind">Colour-blind safe</option>
           </select>
+        </label>
+        <div className="field-row">
+          <span>Time axis</span>
+          <Seg
+            label="Time axis"
+            id="timeaxis"
+            value={sel.timeAxis}
+            onChange={(v) => update({ timeAxis: v })}
+            items={[
+              { v: "aligned", text: "Shared", title: "Both panels at the same timepoints" },
+              { v: "native", text: "Native", title: "Each build at its own pivots, with a separate time axis for the local panel" },
+            ]}
+          />
         </div>
         <label className="check">
           <input type="checkbox" checked={sel.includeProjection} onChange={(e) => update({ includeProjection: e.target.checked })} />
-          Show projected frequencies (if a build has them)
+          Projected frequencies (if a build has them)
         </label>
-        <label htmlFor="timeaxis" className="sublabel">
-          Time axis
-        </label>
-        <div className="segbar" role="radiogroup" aria-label="Time axis" id="timeaxis">
-          <button role="radio" aria-checked={sel.timeAxis === "aligned"} className={sel.timeAxis === "aligned" ? "on" : ""} onClick={() => update({ timeAxis: "aligned" })} title="Both panels at the same timepoints">
-            Shared timepoints
-          </button>
-          <button role="radio" aria-checked={sel.timeAxis === "native"} className={sel.timeAxis === "native" ? "on" : ""} onClick={() => update({ timeAxis: "native" })} title="Each build at its own pivots, with a separate time axis for the local panel">
-            Native pivots
-          </button>
-        </div>
-      </section>
-
+      </details>
     </aside>
   );
 }
@@ -159,11 +185,14 @@ export default function Sidebar({ opts, sel, update, localFields, globalFields, 
 function BuildCard({ b }: { b: BuildInfo }) {
   return (
     <details className={`buildcard ${b.source_type}`}>
-      <summary>
+      <summary title="Build details">
         <span>
-          {b.total_tip_count.toLocaleString()} tips · latest sample {b.most_recent_sample_date}
+          {b.total_tip_count.toLocaleString()} tips · to {b.most_recent_sample_date}
+          {b.warnings.length > 0 && <span className="warn"> · {b.warnings.length} note{b.warnings.length > 1 ? "s" : ""}</span>}
         </span>
-        <span className="more">details</span>
+        <span className="more" aria-hidden>
+          ⓘ
+        </span>
       </summary>
       <dl>
         <dt>Build</dt>
@@ -181,7 +210,7 @@ function BuildCard({ b }: { b: BuildInfo }) {
         <dd className="full ds">{b.downsampling}</dd>
         {b.warnings.length > 0 && (
           <dd className="full warn">
-            {b.warnings.length} ingest note{b.warnings.length > 1 ? "s" : ""}:
+            Ingest notes:
             <ul>
               {b.warnings.map((w, i) => (
                 <li key={i}>{w}</li>
@@ -219,31 +248,29 @@ function GenotypeMenu({ geno, sel, update }: { geno: GenotypeOptions | null; sel
   };
   return (
     <div className="geno">
-      <label htmlFor="gene" className="sublabel">
-        Genotype of
-      </label>
-      <select id="gene" value={sel.gene} onChange={(e) => update({ gene: e.target.value, positions: [] })}>
-        {genes.map((g) => (
-          <option key={g.gene} value={g.gene} disabled={!g.available}>
-            {g.label}
-            {!g.available ? " (not in both builds)" : ""}
-          </option>
-        ))}
-      </select>
+      <div className="row">
+        <select id="gene" aria-label="Gene" value={sel.gene} onChange={(e) => update({ gene: e.target.value, positions: [] })}>
+          {genes.map((g) => (
+            <option key={g.gene} value={g.gene} disabled={!g.available}>
+              {g.label}
+              {!g.available ? " (not in both builds)" : ""}
+            </option>
+          ))}
+        </select>
+        <input
+          id="positions"
+          aria-label={`Positions (${gene?.seq_type === "nuc" ? "nucleotide" : "amino-acid"} numbering)`}
+          title={`${gene?.seq_type === "nuc" ? "Nucleotide" : "Amino-acid"} numbering; several positions combine into one genotype label`}
+          value={text}
+          placeholder="positions, e.g. 158, 189"
+          onChange={(e) => setText(e.target.value)}
+          onBlur={(e) => commit(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && commit((e.target as HTMLInputElement).value)}
+        />
+      </div>
       {gene?.note && <p className="hint warn">{gene.note}</p>}
-      <label htmlFor="positions" className="sublabel">
-        Position(s), {gene?.seq_type === "nuc" ? "nucleotide" : "amino-acid"} numbering
-      </label>
-      <input
-        id="positions"
-        value={text}
-        placeholder="e.g. 158, 189"
-        onChange={(e) => setText(e.target.value)}
-        onBlur={(e) => commit(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && commit((e.target as HTMLInputElement).value)}
-      />
       {suggestions.length > 0 && (
-        <div className="chips suggest" aria-label="Positions variable in both builds">
+        <div className="chips suggest" aria-label="Positions variable in both builds" title="Positions that vary in both builds">
           {suggestions.map((p) => (
             <button
               key={p.position}
@@ -261,7 +288,6 @@ function GenotypeMenu({ geno, sel, update }: { geno: GenotypeOptions | null; sel
           ))}
         </div>
       )}
-      <p className="hint">Suggested: positions that vary in both builds. Multiple positions combine into one genotype label.</p>
     </div>
   );
 }

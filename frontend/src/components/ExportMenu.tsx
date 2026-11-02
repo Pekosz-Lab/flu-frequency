@@ -30,7 +30,7 @@ export default function ExportMenu({ sel, result }: { sel: Selection; result: Co
   return (
     <div className="export" ref={ref}>
       <button className="primary" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-        {busy ? "Preparing…" : "Download figure ▾"}
+        {busy ? "Preparing…" : "Download ▾"}
       </button>
       {open && (
         <div className="menu" role="menu">
@@ -60,7 +60,7 @@ export default function ExportMenu({ sel, result }: { sel: Selection; result: Co
               </div>
             );
           })}
-          <p className="hint">Figures use the current view and include build labels, dates, filters and the caveat footnote.{IS_WEB ? " PDF export is available in the local app." : ""}</p>
+          <p className="hint">Current view, with build labels, dates, filters and caveat.{IS_WEB ? " PDF: local app only." : ""}</p>
         </div>
       )}
       {err && <p className="hint warn">{err}</p>}

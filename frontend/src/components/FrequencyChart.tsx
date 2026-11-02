@@ -272,19 +272,26 @@ export default function FrequencyChart({ result, sel, highlight, text, loading }
           {n}
         </p>
       ))}
-      {!native && al?.reference && (
-        <p className="hint" data-testid="alignment-note">
-          Both panels use the same timepoints: the {al.reference === "local" ? "JHH local" : "Nextstrain global"} build's pivots ({al.step}).
-          {al.max_offset_days?.[al.reference === "local" ? "global" : "local"] != null &&
-            ` ${al.reference === "local" ? "Global" : "Local"} values come from that build's nearest pivot (at most ${al.max_offset_days[al.reference === "local" ? "global" : "local"]} days away; hover for the exact date).`}
-        </p>
-      )}
-      {native && <p className="hint warn">Native pivots: each panel shows its build's own pivot dates (local every {al?.local_spacing_days ?? "?"} days, global every {al?.global_spacing_days ?? "?"} days), so points do not line up exactly between panels.</p>}
-      {result.grouped_into_other.length > 0 && (
-        <p className="hint">
-          “Other” combines {result.grouped_into_other.length} less frequent taxa: {result.grouped_into_other.join(", ")}.
-        </p>
-      )}
+      <div className="chart-notes">
+        {!native && al?.reference && (
+          <span data-testid="alignment-note" title="Hover a point for the exact pivot date used">
+            Both panels use the same timepoints ({al.reference === "local" ? "JHH local" : "Nextstrain global"} pivots, {al.step})
+            {al.max_offset_days?.[al.reference === "local" ? "global" : "local"] != null &&
+              `; ${al.reference === "local" ? "global" : "local"} values from its nearest pivot, ≤ ${al.max_offset_days[al.reference === "local" ? "global" : "local"]} days away`}
+            .
+          </span>
+        )}
+        {native && (
+          <span className="warn">
+            Native pivots: each panel at its own pivot dates (local every {al?.local_spacing_days ?? "?"} days, global every {al?.global_spacing_days ?? "?"} days), so points do not line up exactly.
+          </span>
+        )}
+        {result.grouped_into_other.length > 0 && (
+          <span title={result.grouped_into_other.join(", ")}>
+            “Other” = {result.grouped_into_other.length} less frequent taxa: {result.grouped_into_other.join(", ")}.
+          </span>
+        )}
+      </div>
     </div>
   );
 }

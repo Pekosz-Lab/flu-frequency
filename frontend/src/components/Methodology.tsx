@@ -1,10 +1,7 @@
 export default function Methodology({ text }: { text: Record<string, any> }) {
   return (
-    <section className="card methodology">
-      <details>
-        <summary>
-          <h2>Methodology and caveats</h2>
-        </summary>
+    <div className="methodology">
+        <h3>Methodology and caveats</h3>
         <p>{text.caveat}</p>
         <ul>
           {(text.caveat_points as string[]).map((p, i) => (
@@ -27,7 +24,6 @@ export default function Methodology({ text }: { text: Record<string, any> }) {
         <p>
           <em>{text.footnote}</em>
         </p>
-      </details>
-    </section>
+    </div>
   );
 }

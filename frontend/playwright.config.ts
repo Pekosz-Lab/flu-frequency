@@ -1,6 +1,6 @@
 import { defineConfig } from "@playwright/test";
 
-// Run against a demo store:  ffc demo && ffc serve --store store-demo   (then)  npm run test:e2e
+// Run against a demo store:  ffc demo && ffc --store store-demo serve   (then)  npm run test:e2e
 export default defineConfig({
   testDir: "e2e",
   timeout: 120_000,

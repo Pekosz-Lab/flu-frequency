@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CompareResult, Selection } from "../types";
+import DateControls from "./DateControls";
 
-/** Timeline brush (date range) with data coverage bars and snapshot playback. */
+const fmtRange = (r: [string, string] | null) => (r ? `${r[0]} – ${r[1]}` : "none");
+
+/** Date range (presets, brush over data coverage, exact dates) and snapshot playback. */
 export default function Timeline({ result, sel, update }: { result: CompareResult; sel: Selection; update: (p: Partial<Selection>) => void }) {
   const dr = result.date_ranges;
   const months = useMemo(() => {
@@ -45,7 +48,7 @@ export default function Timeline({ result, sel, update }: { result: CompareResul
       const [y, m] = endM.split("-").map(Number);
       end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
     }
-    update({ start, end });
+    if (start !== sel.start || end !== sel.end) update({ start, end, range: "custom" });
   };
 
   // snapshot playback over the shared timepoints
@@ -72,15 +75,20 @@ export default function Timeline({ result, sel, update }: { result: CompareResul
   const pct = (m: string | undefined) => (m ? (Math.max(0, months.indexOf(m.slice(0, 7))) / Math.max(1, months.length - 1)) * 100 : 0);
   const bar = (r: [string, string] | null) => (r ? { left: `${pct(r[0])}%`, width: `${Math.max(0.8, pct(r[1]) - pct(r[0]))}%` } : { display: "none" });
   const snapI = sel.snapshotTime ? shared.indexOf(sel.snapshotTime) : -1;
+  const point = sel.snapshotMode === "point" && !!sel.snapshotTime;
 
   return (
     <div className="timeline">
       <div className="tl-row">
-        <span className="tl-label">Range</span>
-        <div className="tl-track">
-          <div className="cov local" style={bar(dr.local)} title={`Local data ${dr.local?.join(" – ")}`} />
-          <div className="cov global" style={bar(dr.global)} title={`Global data ${dr.global?.join(" – ")}`} />
-          <div className="cov shared" style={bar(dr.shared)} title={`Shared ${dr.shared?.join(" – ") ?? "none"}`} />
+        <span className="tl-label">Dates</span>
+        <DateControls sel={sel} update={update} result={result} />
+      </div>
+      <div className="tl-row">
+        <span className="tl-label" />
+        <div className="tl-track" title={`Local data ${fmtRange(dr.local)}\nGlobal data ${fmtRange(dr.global)}\nOverlap ${fmtRange(dr.shared)}`}>
+          <div className="cov local" style={bar(dr.local)} />
+          <div className="cov global" style={bar(dr.global)} />
+          <div className="cov shared" style={bar(dr.shared)} />
           <div className="sel" style={{ left: `${(lo / Math.max(1, months.length - 1)) * 100}%`, width: `${((hi - lo) / Math.max(1, months.length - 1)) * 100}%` }} />
           <input
             type="range"
@@ -105,13 +113,12 @@ export default function Timeline({ result, sel, update }: { result: CompareResul
             onKeyUp={() => commit(lo, hi)}
           />
         </div>
-        <span className="tl-val">
-          {months[lo]} → {months[hi]}
+        <span className="tl-legend">
+          <span className="k local" /> local <span className="k global" /> global <span className="k shared" /> overlap
         </span>
       </div>
-      <div className="tl-legend">
-        <span className="k local" /> local data <span className="k global" /> global data <span className="k shared" /> shared comparable range
-      </div>
+      {!dr.shared && <p className="hint warn tl-note">The two datasets have no dates in common.</p>}
+      {dr.shared && !dr.selection_has_both && <p className="hint warn tl-note">The selected range does not contain data from both datasets.</p>}
       {shared.length > 0 && (
         <div className="tl-row">
           <span className="tl-label">Snapshot</span>
@@ -127,18 +134,25 @@ export default function Timeline({ result, sel, update }: { result: CompareResul
           </button>
           <input
             type="range"
+            className={point ? "" : "idle"}
             aria-label="Snapshot timepoint"
             min={0}
             max={shared.length - 1}
             value={snapI < 0 ? shared.length - 1 : snapI}
             onChange={(e) => update({ snapshotMode: "point", snapshotTime: shared[Number(e.target.value)] })}
           />
-          <span className="tl-val">{sel.snapshotMode === "point" && sel.snapshotTime ? sel.snapshotTime : "whole range"}</span>
-          {sel.snapshotMode === "point" && (
-            <button className="link" onClick={() => update({ snapshotMode: "range", snapshotTime: null })}>
-              use whole range
-            </button>
-          )}
+          <span className="tl-val">
+            {point ? (
+              <>
+                {sel.snapshotTime}{" "}
+                <button className="link" onClick={() => (setPlaying(false), update({ snapshotMode: "range", snapshotTime: null }))}>
+                  whole range
+                </button>
+              </>
+            ) : (
+              <span className="muted">whole range · drag to pick a timepoint</span>
+            )}
+          </span>
         </div>
       )}
     </div>
