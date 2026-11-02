@@ -1,8 +1,9 @@
 // Client-side exports for the website (port of ffc/exports.py, minus PDF).
-import Plotly from "plotly.js-dist-min";
-import { buildFigure } from "./components/FrequencyChart";
+import { compile } from "vega-lite";
+import { parse, View } from "vega";
+import { buildSpec } from "./components/FrequencyChart";
 import CONFIG from "./engine/web-config.json";
-import type { CompareResult, Selection, View } from "./types";
+import type { CompareResult, Selection, View as View_ } from "./types";
 
 const T = CONFIG.text;
 const GROUPING: Record<string, string> = { clade: "Clade", subclade: "Subclade", genotype: "Genotype" };
@@ -55,44 +56,47 @@ function save(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-/** Figure with title, provenance block and caveat footnote, rendered off-screen. */
-async function figureDataUrl(r: CompareResult, sel: Selection, view: View, format: "png" | "svg"): Promise<string> {
-  const { traces, layout } = buildFigure(r, { ...sel, view }, null, T);
-  const meta = metadataLines(r, sel).flatMap((l) => wrap(l, 175));
-  const foot = wrap("Note: " + T.footnote, 185);
-  const W = 1650, plotH = 640, metaH = (meta.length + foot.length + 1) * 15 + 30;
-  const H = 110 + plotH + metaH;
+/** Figure with title, provenance block and caveat footnote, rendered off-screen with Vega. */
+async function figureDataUrl(r: CompareResult, sel: Selection, view: View_, format: "png" | "svg"): Promise<string> {
+  const W = 1400;
+  const { body, datasets, params, config } = buildSpec(r, { ...sel, view }, T, { width: W, compact: false });
+  const meta = metadataLines(r, sel).flatMap((l) => wrap(l, 190));
+  const foot = wrap("Note: " + T.footnote, 200);
+  const lines = [...meta.map((s) => ({ s, i: false })), ...foot.map((s) => ({ s, i: true }))].map((x, n) => ({ ...x, n }));
   const pc = r.provenance.comparison;
   const pl = r.provenance.local;
   const title = `${v(pl, "subtype")} ${v(pl, "segment")} ${String(GROUPING[pc.grouping] ?? "").toLowerCase()} frequencies: JHH local vs Nextstrain global`;
-  const L = { ...layout };
-  L.width = W;
-  L.height = H;
-  L.margin = { l: 80, r: 220, t: 110, b: metaH + 50 };
-  L.paper_bgcolor = "#ffffff";
-  L.plot_bgcolor = "#ffffff";
-  L.title = { text: `<b>${title}</b><br><span style="font-size:13px">Relative frequencies of taxa in the supplied public builds.</span>`, x: 0.01, xanchor: "left", y: 0.985, yanchor: "top", font: { size: 20 } };
-  const ann = [...(L.annotations ?? [])];
-  let y = -((40 + 18) / plotH);
-  for (const line of meta) {
-    ann.push({ xref: "paper", yref: "paper", x: 0, y, xanchor: "left", yanchor: "top", showarrow: false, align: "left", text: line.replace(/</g, "&lt;"), font: { size: 11, color: "#222" } });
-    y -= 15 / plotH;
-  }
-  y -= 8 / plotH;
-  for (const line of foot) {
-    ann.push({ xref: "paper", yref: "paper", x: 0, y, xanchor: "left", yanchor: "top", showarrow: false, align: "left", text: `<i>${line.replace(/</g, "&lt;")}</i>`, font: { size: 11, color: "#444" } });
-    y -= 15 / plotH;
-  }
-  L.annotations = ann;
-  const div = document.createElement("div");
-  div.style.cssText = "position:fixed;left:-99999px;top:0;width:1650px";
-  document.body.appendChild(div);
+  const caption = {
+    data: { values: lines },
+    width: W - 40,
+    height: lines.length * 16,
+    mark: { type: "text", align: "left", baseline: "top", fontSize: 11, color: "#222", limit: W - 40 },
+    encoding: {
+      x: { value: 0 },
+      y: { field: "n", type: "quantitative", scale: { domain: [0, Math.max(1, lines.length)], range: [0, lines.length * 16] }, axis: null },
+      text: { field: "s" },
+      fontStyle: { condition: { test: "datum.i", value: "italic" }, value: "normal" },
+    },
+  };
+  const spec: any = {
+    $schema: "https://vega.github.io/schema/vega-lite/v6.json",
+    title: { text: title, subtitle: "Relative frequencies of taxa in the supplied public builds.", anchor: "start", fontSize: 20, subtitleFontSize: 13, offset: 14 },
+    background: "#ffffff",
+    padding: 24,
+    datasets,
+    params: [...params, ...(body.params ?? [])],
+    config,
+    vconcat: [{ ...body, params: undefined }, caption],
+    spacing: 28,
+  };
+  const vw = new View(parse(compile(spec).spec), { renderer: "none" });
   try {
-    await Plotly.newPlot(div, traces, L, { staticPlot: true });
-    return await Plotly.toImage(div, { format, width: W, height: H, scale: format === "png" ? 2 : 1 });
+    await vw.runAsync();
+    if (format === "png") return await vw.toImageURL("png", 2);
+    const svg = await vw.toSVG();
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
   } finally {
-    Plotly.purge(div);
-    div.remove();
+    vw.finalize();
   }
 }
 
@@ -141,7 +145,7 @@ function comparison(r: CompareResult) {
 
 const fileBase = (r: CompareResult, sel: Selection, what: string) => `${sel.subtype}_${sel.segment}_${sel.grouping}_${r.global.build_id}_${what}`;
 
-export async function webDownload(path: string, sel: Selection, view: View, result: CompareResult | null) {
+export async function webDownload(path: string, sel: Selection, view: View_, result: CompareResult | null) {
   if (!result) throw new Error("Nothing to export yet.");
   const u = new URL(path, "https://x.invalid");
   const fmt = u.searchParams.get("fmt") ?? "png";

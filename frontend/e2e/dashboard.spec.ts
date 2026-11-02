@@ -2,10 +2,11 @@ import { expect, test, type Page } from "@playwright/test";
 
 /** x values of the local (top, x2) and global (bottom, x) panels in the side-by-side view */
 async function panelDates(page: Page) {
+  await page.waitForFunction(() => (document.querySelector("[data-testid=frequency-chart]") as any)?.__view);
   return page.evaluate(() => {
-    const gd: any = document.querySelector("[data-testid=frequency-chart]");
-    const xs = (ax: string) => gd.data.filter((t: any) => t.xaxis === ax).map((t: any) => t.x as string[]);
-    return { top: xs("x2")[0] as string[], bottom: xs("x")[0] as string[], r1: gd._fullLayout.xaxis.range, r2: gd._fullLayout.xaxis2.range };
+    const view: any = (document.querySelector("[data-testid=frequency-chart]") as any).__view;
+    const dates = (name: string) => Array.from(new Set(view.data(name).map((r: any) => r.date as string))).sort();
+    return { top: dates("local"), bottom: dates("global") };
   });
 }
 
@@ -13,7 +14,7 @@ test("core workflow: subtype, grouping, genotype, filters, dates, views, export"
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   await page.goto("/");
-  await expect(page.getByTestId("frequency-chart").locator(".main-svg").first()).toBeVisible();
+  await expect(page.getByTestId("frequency-chart").locator("svg.marks").first()).toBeVisible();
   await expect(page.getByText("Relative frequencies only.")).toBeVisible();
 
   // default view: only the dates where both datasets have data, and both panels line up exactly
@@ -22,7 +23,6 @@ test("core workflow: subtype, grouping, genotype, filters, dates, views, export"
   const def = await panelDates(page);
   expect(def.top.length).toBeGreaterThan(3);
   expect(def.top).toEqual(def.bottom);
-  expect(def.r1).toEqual(def.r2);
   await expect(page.getByTestId("alignment-note")).toContainText("same timepoints");
 
   // subtype switch updates segments and builds
@@ -94,7 +94,7 @@ test("core workflow: subtype, grouping, genotype, filters, dates, views, export"
   await page.getByRole("radio", { name: "Shared", exact: true }).click();
 
   // views and date presets
-  for (const v of ["Overlay", "Difference", "Side by side"]) await page.getByRole("tab", { name: v }).click();
+  for (const v of ["By taxon", "Difference", "Side by side"]) await page.getByRole("tab", { name: v }).click();
   await page.getByRole("button", { name: "All", exact: true }).click();
   await expect(page.locator(".dates input[aria-label='Start date']")).toHaveValue("");
   await page.getByRole("button", { name: "12 mo" }).click();
@@ -106,6 +106,22 @@ test("core workflow: subtype, grouping, genotype, filters, dates, views, export"
   await expect(page.locator(".card .sub", { hasText: /^at / })).toBeVisible();
   await page.getByRole("button", { name: /^Taxon/ }).click();
   await expect(page.locator("th[aria-sort=ascending]")).toContainText("Taxon");
+
+  // chart interaction: clicking a legend entry highlights that taxon (and the table row)
+  await page.locator("[data-testid=frequency-chart] .role-legend-label text").first().click({ force: true });
+  await expect(page.locator("table.snap tr.hl")).toHaveCount(1);
+  await page.locator("table.snap tr.hl").click();
+  await expect(page.locator("table.snap tr.hl")).toHaveCount(0);
+
+  // the chart spec downloads as Vega-Lite JSON (open in Python with altair.Chart.from_dict)
+  const [spec] = await Promise.all([
+    page.waitForEvent("download"),
+    (async () => {
+      await page.getByRole("button", { name: /Download/ }).click();
+      await page.getByRole("menuitem", { name: /Vega-Lite/ }).click();
+    })(),
+  ]);
+  expect(spec.suggestedFilename()).toMatch(/vega-lite\.json$/);
 
   // provenance panel shows the not-available marker
   await expect(page.locator(".prov.local")).toContainText("Not supplied in manifest");

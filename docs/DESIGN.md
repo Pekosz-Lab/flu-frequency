@@ -30,7 +30,7 @@ flowchart TB
     end
     MAN --> V
     subgraph S2["Stage 2: ffc serve"]
-      API["FastAPI<br/>(engine + LRU cache)"] --> UI["React + TS dashboard<br/>(Plotly)"]
+      API["FastAPI<br/>(engine + LRU cache)"] --> UI["React + TS dashboard<br/>(Vega-Lite)"]
       API --> EXP["matplotlib exports<br/>PNG/SVG/PDF, CSV/TSV/JSON, HTML report"]
     end
     DB --> API
@@ -51,7 +51,7 @@ flowchart TB
 | Layer | Used | Note |
 |---|---|---|
 | Frontend | React 18 + TypeScript + Vite | as preferred; `frontend/dist` is committed so lab users need no Node |
-| Interactive charts | Plotly.js | hover, legend isolate (double-click), zoom out of the box |
+| Interactive charts | Vega-Lite (vega-embed) | the grammar Altair writes, so any figure can be saved as a spec and reopened in Python (`alt.Chart.from_dict`); linked hover across panels, legend/click highlighting; ~1 MB instead of Plotly's ~4.5 MB |
 | Publication figures | matplotlib (server-side) | one renderer for PNG/SVG/PDF with the full caption block; browser-side PDF export is unreliable |
 | Backend | FastAPI | as preferred |
 | Processing | Python + pandas + NumPy | pandas instead of Polars: smaller dependency set; volumes are small (≤ ~10⁶ rows) |
@@ -291,7 +291,8 @@ App                      selection state, debounced/cancellable /api/compare,
     ├── chart card: title, view toggle, ExportMenu ("Download")
     │   ├── FilterBar: one Auspice-style search box ("Filter data") with scope-coloured chips,
     │   │   and tips-included bars for each build
-    │   ├── FrequencyChart (stacked panels | overlay | difference) + one-line notes
+    │   ├── FrequencyChart: Vega-Lite spec from `buildSpec` (side by side | by taxon | difference),
+    │   │   re-laid-out on resize (legend below the plot and fewer columns under 640 px)
     │   ├── Timeline: DateControls (Overlap | 6/12/24 mo | All, exact dates), range brush with
     │   │   coverage bars, snapshot slider + play
     │   ├── Attribution (labels, JSON dates, fetch and processing timestamps)
@@ -310,6 +311,21 @@ build lacks are dropped). Keyboard: ↑/↓, Enter, Esc (back / close), Backspac
 empty box removes the last chip. The request body is unchanged (`shared_filters`,
 `local_filters`, `global_filters`).
 
+**Chart.** `FrequencyChart.buildSpec` turns a `/api/compare` result into a Vega-Lite spec
+(no Plotly). Views: *Side by side* (JHH local stacked areas above Nextstrain global, one
+shared crosshair whose tooltip lists every taxon as "local vs global (± pp)" at that
+timepoint); *By taxon* (one small panel per taxon, local solid blue, global dashed brown,
+the gap between them shaded; independent y scales); *Difference* (local − global in pp,
+blue/brown halves labelled above the plot). Clicking a legend entry or a taxon's area or line
+highlights it, in sync with the snapshot table; the snapshot timepoint is drawn as a dashed
+rule. Download → "Chart spec (Vega-Lite / Altair)" saves the on-screen spec with its data;
+the specs validate against Altair 6's schema. Server-side PNG/SVG/PDF exports (matplotlib)
+are unchanged; the local app's "By taxon" export uses the server's overlay figure.
+
+**Phones (≤ 760 px).** Settings fold under a "Settings" button above the chart, controls
+get larger touch targets, the filter list and table adapt (sticky taxon column), and the
+chart re-lays itself out for the width. Wider screens use the desktop layout unchanged.
+
 **Date range.** `Selection.range` is `"overlap"` (default), a number of months, `"all"`
 or `"custom"`. For the first three, App compares each response's `date_ranges` with the
 dates it asked for and, if they differ, asks again with the target range: `overlap` =
@@ -323,7 +339,7 @@ date switches to `custom`. With no overlap, `overlap` falls back to all dates.
 ```
 ┌──────────────────────┬────────────────────────────────────────────────────────────┐
 │ DATASET              │ ┌────────────────────────────────────────────────────────┐ │
-│ [H1N1pdm|H3N2|B/Vic] │ │ A/H3N2 HA · Subclade        [Side|Overlay|Diff] [Download]│
+│ [H1N1pdm|H3N2|B/Vic] │ │ A/H3N2 HA · Subclade        [Side|By taxon|Diff] [Download]
 │ [ HA | NA ]          │ │ JHH local vs Nextstrain global 2y                      │ │
 │ COMPARE              │ │ [⌕ Both Subclade: J.2 ×  Global Region: N. America × ] │ │
 │ ▌JHH local           │ │                                     Local ▬▬▬ 420/420  │ │
@@ -453,7 +469,7 @@ so no preflight), and hands them to `engine/build.ts` + `engine/engine.ts`, a po
 of the ingestion and query engine. Builds load when first selected and stay in
 memory for the session. Results have the same shape as the local API, so the UI is
 shared. Colours come from the selected seasonal-flu dataset's own scale (refreshed
-on every visit by definition). Exports run client-side (PNG/SVG via Plotly with
+on every visit by definition). Exports run client-side (PNG/SVG rendered by Vega with
 the same title, provenance block and footnote; CSV/TSV/JSON; HTML report); PDF
 is local-only.
 

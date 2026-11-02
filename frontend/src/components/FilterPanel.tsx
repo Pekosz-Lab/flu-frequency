@@ -265,7 +265,7 @@ export default function FilterBar({ sel, update, localFields, globalFields, shar
             aria-expanded={open}
             aria-controls="filter-options"
             aria-label="Filter data"
-            placeholder={chips.length ? "Add filter…" : "Filter data: type a region, country, subclade…"}
+            placeholder={chips.length ? "Add filter…" : "Filter by region, country, subclade…"}
             value={q}
             onChange={(e) => {
               setQ(e.target.value);

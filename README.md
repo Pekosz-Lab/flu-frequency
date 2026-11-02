@@ -118,8 +118,14 @@ You can also skip `ffc fetch` and list JSONs by hand: copy
   data (after filters), so the two panels line up. Presets: Overlap, last 6/12/24 months
   of the overlap, All; or drag the range brush / type exact dates. The snapshot slider
   (with play) steps through shared timepoints.
-- **Main panel:** JHH local frequencies above global frequencies on a shared time axis,
-  or an overlay, or the local − global difference in percentage points.
+- **Main panel:** *Side by side* (JHH local above Nextstrain global on a shared time axis),
+  *By taxon* (one small panel per taxon: local solid, global dashed, the gap shaded) or
+  *Difference* (local − global in percentage points). Hover for a local-vs-global readout of
+  every taxon at that timepoint; click a legend entry or a colour to highlight a taxon.
+  Charts are drawn with Vega-Lite, the grammar behind Altair: Download → "Chart spec" saves
+  the figure as JSON you can open in Python with `altair.Chart.from_dict(...)`.
+- **Phones:** the same features in a one-column layout; settings sit under a "Settings"
+  button above the chart.
 - **Snapshot table** (click a column to sort), **Provenance & methods** (collapsed; each
   value tagged JSON / manifest / derived / missing), and **Download** (PNG, SVG, PDF, CSV,
   TSV, JSON, HTML report). Every figure carries build labels, dates, filters and the

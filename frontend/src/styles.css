@@ -53,6 +53,7 @@ button:disabled { cursor: not-allowed; opacity: 0.4; }
 /* ---------- sidebar ---------- */
 .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--line); padding: 16px 14px 32px; }
 .brand { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.brand-name { display: flex; align-items: center; gap: 8px; }
 .brand .dot { width: 12px; height: 12px; border-radius: 50%; background: linear-gradient(90deg, var(--local) 50%, var(--global) 50%); }
 .ctl { padding: 12px 0; border-top: 1px solid var(--soft); display: flex; flex-direction: column; gap: 7px; }
 .ctl-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
@@ -114,7 +115,14 @@ details.ctl[open] { gap: 8px; }
 
 .chart-wrap { position: relative; }
 .chart-wrap.busy .chart { opacity: 0.55; transition: opacity 0.15s; }
-.chart { width: 100%; height: 540px; }
+.chart { width: 100%; min-height: 320px; }
+.chart svg.marks { display: block; max-width: 100%; }
+.chart .role-legend-symbol path, .chart .role-legend-label text { cursor: pointer; }
+.diff-key { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 14px; margin: 2px 0 6px; }
+.chart-tip { color: var(--faint); }
+#vg-tooltip-element.vg-tooltip { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13px; border-radius: 8px; box-shadow: 0 6px 20px rgba(20, 30, 50, 0.16); }
+#vg-tooltip-element td.key { color: var(--muted); font-weight: 600; }
+.settings-toggle { display: none; }
 .chart-notes { display: flex; flex-direction: column; gap: 1px; font-size: 12px; color: var(--muted); }
 
 .export { position: relative; }
@@ -292,3 +300,62 @@ td.diffcol { display: flex; align-items: center; gap: 8px; }
 .sitenav a { color: var(--muted); text-decoration: none; }
 .sitenav a:hover { color: var(--ink); text-decoration: underline; }
 .sitenav [aria-current] { color: var(--ink); font-weight: 600; }
+
+/* ---------- phones (desktop layout above is unchanged) ---------- */
+@media (max-width: 760px) {
+  :root { font-size: 15px; }
+  .app { display: block; }
+  .sidebar { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 10px 14px 6px; }
+  .brand { margin-bottom: 6px; justify-content: space-between; }
+  .settings-toggle { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 6px 12px; font-size: 14px; font-weight: 600; }
+  .sidebar.collapsed .ctl { display: none; }
+  .sidebar .ctl { padding: 10px 0; }
+  .segbar button, .presets button, .seg-toggle button { padding: 9px 6px; font-size: 14px; }
+  select, input[type="date"], input:not([type]), input[type="text"] { font-size: 16px; padding: 8px 10px; }
+  .main { padding: 10px 10px 32px; gap: 10px; }
+  .card { padding: 12px; }
+  .card h1 { font-size: 17px; }
+  .chart-head { flex-wrap: wrap; align-items: flex-start; gap: 8px; }
+  .chart-head > div:first-child { flex: 1 1 0; min-width: 0; }
+  .head-actions { display: contents; }
+  .head-actions .export { order: 2; }
+  .head-actions .seg-toggle { order: 3; flex: 1 1 100%; }
+  .seg-toggle button { padding: 9px 2px; }
+  .presets button { padding: 9px 2px; min-width: 0; }
+  .filterbar { flex-direction: column; align-items: stretch; gap: 6px; }
+  .fbox-input input { min-width: 120px; font-size: 16px; }
+  .fbox-menu { max-height: 60vh; }
+  .opt { padding: 9px 12px; align-items: flex-start; }
+  .opt-name { flex-wrap: wrap; row-gap: 2px; }
+  .opt-field { flex-basis: 100%; padding-left: 22px; }
+  .fchip { max-width: 100%; font-size: 13px; }
+  .inclusion { width: 100%; max-width: none; }
+  .chart-notes { font-size: 12.5px; }
+  .chart-tip { display: none; }
+  .timeline { gap: 8px; }
+  .tl-row { flex-wrap: wrap; gap: 8px; }
+  .tl-label { width: auto; }
+  .tl-label:empty { display: none; }
+  .dates { flex-direction: column; align-items: stretch; gap: 8px; width: 100%; flex: 1 1 100%; }
+  .tl-row, .dates, .presets, .date-inputs { min-width: 0; max-width: 100%; }
+  .date-inputs input { width: 0; flex: 1 1 0; min-width: 0; padding: 8px 6px; }
+  .tl-track { flex-basis: 100%; height: 40px; }
+  .tl-track input[type="range"] { height: 30px; top: 4px; }
+  .tl-track input[type="range"]::-webkit-slider-thumb { width: 22px; height: 32px; }
+  .tl-track .sel { height: 36px; }
+  .tl-legend { min-width: 0; }
+  .tl-note { margin-left: 0; }
+  .tl-row > input[type="range"] { flex: 1; min-width: 0; }
+  .tl-val { min-width: 0; flex-basis: 100%; }
+  .play { width: 40px; height: 34px; }
+  .attribution, .caveat { font-size: 12px; overflow-wrap: anywhere; }
+  .card-head { flex-direction: column; align-items: stretch; }
+  .search { width: 100% !important; }
+  .diffcol { min-width: 120px; }
+  .snap td:first-child, .snap th:first-child { position: sticky; left: 0; background: #fff; z-index: 1; box-shadow: 1px 0 0 var(--soft); }
+  .snap td, .snap th { padding: 6px; }
+  .kv { grid-template-columns: 110px 1fr; }
+  .details-card > details > summary .muted { display: none; }
+  .menu { width: min(280px, 90vw); }
+  #vg-tooltip-element.vg-tooltip { font-size: 12.5px; max-width: 92vw; }
+}

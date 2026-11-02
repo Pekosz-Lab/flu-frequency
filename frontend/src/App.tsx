@@ -56,7 +56,7 @@ export function buildsFor(opts: Options, subtype: string, segment: string, type:
 
 const VIEWS = [
   ["stacked", "Side by side"],
-  ["overlay", "Overlay"],
+  ["overlay", "By taxon"],
   ["difference", "Difference"],
 ] as const;
 
@@ -233,7 +233,7 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              <ExportMenu sel={sel} result={result} />
+              <ExportMenu sel={sel} result={result} text={opts.text} />
             </div>
           </header>
           <FilterBar
@@ -255,7 +255,7 @@ export default function App() {
             <div className="empty">Choose a gene and at least one position under “Color by”.</div>
           ) : result ? (
             <>
-              <FrequencyChart result={result} sel={sel} highlight={highlight} text={opts.text} loading={loading} />
+              <FrequencyChart result={result} sel={sel} highlight={highlight} setHighlight={setHighlight} text={opts.text} loading={loading} />
               <Timeline result={result} sel={sel} update={update} />
             </>
           ) : (

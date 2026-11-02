@@ -38,7 +38,7 @@ test("public website: homepage, analysis from public builds only, run-locally pa
   await page.getByRole("link", { name: /Open the analysis/ }).click();
   await expect(page).toHaveURL(/\/analysis\/$/);
   await expect(page.locator(".banner.public")).toContainText("never accesses private builds");
-  await expect(page.getByTestId("frequency-chart").locator(".main-svg").first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("frequency-chart").locator("svg.marks").first()).toBeVisible({ timeout: 30_000 });
 
   // a full workflow in the browser engine
   await expect(page.getByRole("button", { name: "Overlap" })).toHaveAttribute("aria-pressed", "true");

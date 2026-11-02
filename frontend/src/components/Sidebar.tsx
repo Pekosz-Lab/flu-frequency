@@ -45,6 +45,8 @@ function Seg<T extends string | number>({
 }
 
 export default function Sidebar({ opts, sel, update, geno, localBuild, globalBuild }: Props) {
+  // phones: settings fold away under one button so the chart comes first (always shown on desktop)
+  const [open, setOpen] = useState(false);
   const segments = segmentsFor(opts, sel.subtype);
   const locals = buildsFor(opts, sel.subtype, sel.segment, "local");
   const globals = buildsFor(opts, sel.subtype, sel.segment, "global");
@@ -54,9 +56,14 @@ export default function Sidebar({ opts, sel, update, geno, localBuild, globalBui
   const globalsAsButtons = globals.length <= 6 && resolutions.every((r) => r) && new Set(resolutions).size === resolutions.length;
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${open ? "" : "collapsed"}`}>
       <div className="brand">
-        <span className="dot" /> Flu Frequency Compare
+        <span className="brand-name">
+          <span className="dot" /> Flu Frequency Compare
+        </span>
+        <button className="settings-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? "Hide settings ▴" : "Settings ▾"}
+        </button>
       </div>
 
       <section className="ctl">

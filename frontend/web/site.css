@@ -44,7 +44,16 @@ footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 16px;
 pre { background: #10141f; color: #e6e9ef; border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 13.5px; line-height: 1.5; margin: 8px 0; }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 p code, li code { background: var(--soft); padding: 1px 5px; border-radius: 4px; font-size: 0.92em; }
+pre code, li pre code { background: none; padding: 0; border-radius: 0; font-size: inherit; color: inherit; }
 .note { border-left: 3px solid var(--local); background: var(--local-soft); padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 14px; }
 .faq dt { font-weight: 600; margin-top: 12px; }
 .faq dd { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
-@media (max-width: 640px) { .hero h1 { font-size: 30px; } .top nav { gap: 12px; } }
+@media (max-width: 640px) {
+  .hero h1 { font-size: 30px; }
+  .top { flex-wrap: wrap; gap: 8px; padding: 14px 16px; }
+  .top nav { gap: 12px; flex-wrap: wrap; }
+  main { padding: 0 16px 48px; }
+  .steps > li { padding: 16px 14px 16px 52px; }
+  .steps > li::before { left: 14px; top: 16px; }
+  pre { font-size: 12.5px; }
+}
